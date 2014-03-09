@@ -1,0 +1,372 @@
+package StatHandler
+import public StatHandlerConfig
+import Rational
+import HashMap
+import LinkedList
+// By muzzel - Version 1.0
+
+/** Creates a new RawStatBuffer initialized with default base stats for the specified unitType. */
+public function createBaseStatBuffer(int unitTypeId) returns UnitBaseStatBuffer
+	return new UnitBaseStatBuffer(unitTypeId)
+	
+/** Assigns a new UnitStatBuffer to the specified unit. */
+public function createUnitStatBuffer(unit u)
+	new UnitStatBuffer(u)
+	
+/** Destroys this units UnitStatBuffer, if any assigned. */
+public function destroyUnitStatBuffer(unit u)
+	let buffer = mapUnitStatBuffers[getUnitIndex(u)]
+	if buffer castTo int != 0
+		destroy buffer
+
+/** 
+ * Returns the specified units UnitStatBuffer.
+ * Returns null if no UnitStatBuffer assigned.
+ * Requires getUnitIndex(). Returns null if not available.
+ */
+public function getUnitStatBuffer(unit u) returns UnitStatBuffer
+	return mapUnitStatBuffers[getUnitIndex(u)]
+
+/**
+ * Returns a units stat.
+ * Warning if no UnitStatBuffer assigned.
+ * Requires getUnitIndex(). Warning if not available.
+ */
+public function unit.getStat(Stat s) returns int
+	let buffer = mapUnitStatBuffers[getUnitIndex(this)]
+	if buffer castTo int == 0
+		printWarning("StatHandlerConfig: A called function requires a valid implementation of getUnitIndex(unit u).")
+	return buffer.get(s)
+	
+/**
+ * Returns a units base stat.
+ * Warning if no UnitStatBuffer assigned.
+ * Requires getUnitIndex(). Warning if not available.
+ */
+public function unit.getBaseStat(Stat s) returns int
+	let buffer = mapUnitStatBuffers[getUnitIndex(this)]
+	if buffer castTo int == 0
+		printWarning("StatHandlerConfig: A called function requires a valid implementation of getUnitIndex(unit u).")
+	return buffer.getBaseStat(s)
+
+/**
+ * Applies the specified StatList to the unit.
+ * Warning if no UnitStatBuffer assigned.
+ * Requires getUnitIndex()! Warning if not available.
+ */
+public function unit.applyStatList(StatList statList)
+	let buffer = mapUnitStatBuffers[getUnitIndex(this)]
+	if buffer castTo int == 0
+		printWarning("StatHandlerConfig: A called function requires a valid implementation of getUnitIndex(unit u).")
+	buffer.apply(statList)
+	
+/**
+ * Removes the specified StatList from the unit.
+ * Warning if no UnitStatBuffer assigned.
+ * Requires getUnitIndex()! Warning if not available.
+ */
+public function unit.removeStatList(StatList statList)
+	let buffer = mapUnitStatBuffers[getUnitIndex(this)]
+	if buffer castTo int == 0
+		printWarning("StatHandlerConfig: A called function requires a valid implementation of getUnitIndex(unit u).")
+	buffer.remove(statList)
+
+/** Registers the specified stat to grow linearly. */
+public function registerStatLin(Stat stat)
+	statType[stat castTo int] = StatType.LINEAR
+	statSubstat[stat castTo int] = -1
+	parentStat[stat castTo int] = -1
+	numStats++
+	
+/** Registers the specified stat to grow linearly and adds a StatChangedEvent. */
+public function registerStatLin(Stat stat, StatChangedEvent statChangedEvent)
+	statChangedEvents[stat castTo int] = statChangedEvent
+	registerStatLin(stat)
+	
+/** Registers the specified stat to grow exponentially. */
+public function registerStatExp(Stat stat)
+	statType[stat castTo int] = StatType.EXPONENTIAL
+	statSubstat[stat castTo int] = -1
+	parentStat[stat castTo int] = -1
+	numStats++
+	
+/** Registers the specified stat to grow exponentially and adds a StatChangedEvent. */
+public function registerStatExp(Stat stat, StatChangedEvent statChangedEvent)
+	statChangedEvents[stat castTo int] = statChangedEvent
+	registerStatExp(stat)
+
+/** Registers the specified stat to grow logistically. */
+public function registerStatLog(Stat stat)
+	statType[stat castTo int] = StatType.LOGISTIC
+	statSubstat[stat castTo int] = -1
+	parentStat[stat castTo int] = -1
+	numStats++
+	
+/** Registers the specified stat to grow logistically and adds a StatChangedEvent. */
+public function registerStatLog(Stat stat, StatChangedEvent statChangedEvent)
+	statChangedEvents[stat castTo int] = statChangedEvent
+	registerStatLog(stat)
+
+/** Registers the specified stat to grow linearly and adds a linear substat. */
+public function registerStatLinLin(Stat stat, Stat substat)
+	registerStatLin(stat)
+	registerStatLin(substat)
+	statSubstat[stat castTo int] = substat castTo int
+	parentStat[substat castTo int] = stat castTo int
+	
+/** Registers the specified stat to grow linearly, adds a linear substat and a StatChangedEvent. */
+public function registerStatLinLin(Stat stat, Stat substat, StatChangedEvent statChangedEvent)
+	statChangedEvents[stat castTo int] = statChangedEvent
+	registerStatLinLin(stat, substat)
+	
+/** Registers the specified stat to grow linearly and adds an exponential substat. */
+public function registerStatLinExp(Stat stat, Stat substat)
+	registerStatLin(stat)
+	registerStatExp(substat)
+	statSubstat[stat castTo int] = substat castTo int
+	parentStat[substat castTo int] = stat castTo int
+	
+/** Registers the specified stat to grow linearly, adds a exponential substat and a StatChangedEvent. */
+public function registerStatLinExp(Stat stat, Stat substat, StatChangedEvent statChangedEvent)
+	statChangedEvents[stat castTo int] = statChangedEvent
+	registerStatLinExp(stat, substat)
+
+StatType array statType
+int array statSubstat // references the stats substat, -1 if none
+int array parentStat // references the substats stat, -1 if none
+StatChangedEvent array statChangedEvents
+int numStats = 0 // number of stats total
+HashMap<int, UnitBaseStatBuffer> mapBaseStatBuffers = new HashMap<int, UnitBaseStatBuffer>()
+UnitStatBuffer array mapUnitStatBuffers
+UnitBaseStatBuffer DEFAULT_BASE_STAT_BUFFER
+
+public interface StatChangedEvent
+	function statChanged(unit u, Stat s)
+
+enum StatType
+	LINEAR
+	EXPONENTIAL
+	LOGISTIC
+
+class StatEntity
+	Stat stat
+	int val
+	
+	construct(Stat stat, int val)
+		this.stat = stat
+		this.val = val
+
+/** A dynamic list which can hold an arbitrary amount of stats. */
+public class StatList
+	protected LinkedList<StatEntity> statList
+	
+	construct()
+		statList = new LinkedList<StatEntity>()
+		
+	/**
+	 * Add a stat with the specified value.
+	 * For exponential/logistic stats use percental values.
+	 */
+	function add(Stat s, int value)
+		switch statType[s castTo int]
+			case LINEAR
+				statList.add(new StatEntity(s, value))
+			case EXPONENTIAL
+				statList.add(new StatEntity(s, value+100))
+			case LOGISTIC
+				statList.add(new StatEntity(s, 100-value))
+		
+	ondestroy
+		for StatEntity s in statList
+			destroy s
+		destroy statList
+
+/**
+ * A sized list which buffers a units base stats.
+ * This is used to set default values for UnitStatBuffers.
+ */
+public class UnitBaseStatBuffer
+	private static int array stats
+	private int arrayStart
+	
+	/** Creates a new RawStatBuffer initialized with default base stats for the specified unitType. */
+	construct(int unitType)
+		mapBaseStatBuffers.put(unitType, this)
+		arrayStart = 1 + (this castTo int - 1) * numStats
+		for n = 0 to numStats
+			if statType[n] == StatType.LINEAR
+				stats[arrayStart + n] = 0
+			else // EXPONENTIAL, LOGISTIC
+				stats[arrayStart + n] = 100
+		
+	/** Sets the specified stat to the specified value. */
+	function set(Stat s, int value)
+		switch statType[s castTo int]
+			case LINEAR
+				stats[s2i(s)] = value
+			case EXPONENTIAL
+				stats[s2i(s)] = value+100
+			case LOGISTIC
+				stats[s2i(s)] = 100-value
+	
+	/** Returns the array index for the specified stat. */
+	protected function s2i(Stat s) returns int
+		return arrayStart + s castTo int
+	
+	/** Returns the base value (in the internal representation) of the specified stat. */
+	protected function getStatRaw(Stat s) returns int
+		return stats[arrayStart + s castTo int]
+
+/**
+ * A sized list which buffers a units stats.
+ * Allows adding and removing StatLists and cached retrieval of single stats.
+ */
+public class UnitStatBuffer
+	private static int array statsAbs
+	private static rational array statsPerc
+	// Cache:
+	private static int array cache
+	private static boolean array cacheDirty
+	// Stat changed events:
+	private static Stat array eventsToInvoke
+	private static int eventsToInvokeLast
+	private static boolean array isEventAdded
+	private int arrayStart
+	private unit u
+	private UnitBaseStatBuffer baseStats
+	
+	/**
+	 * Creates a new UnitStatBuffer for the specified unit.
+	 * Initializes it with values from the UnitBaseStatBuffer assigned to the units unittype.
+	 */
+	construct(unit u)
+		mapUnitStatBuffers[getUnitIndex(u)] = this
+		reset(u, mapBaseStatBuffers.get(u.getTypeId()))
+	
+	/**
+	 * Creates a new UnitStatBuffer for the specified unit.
+	 * Initializes it with values from the specified UnitBaseStatBuffer.
+	 * Uses a default UnitBaseStatBuffer if null.
+	 */
+	construct(unit u, UnitBaseStatBuffer baseStats)
+		mapUnitStatBuffers[getUnitIndex(u)] = this
+		reset(u, baseStats)
+	
+	ondestroy
+		mapUnitStatBuffers[getUnitIndex(u)] = null
+	
+	private function reset(unit u, UnitBaseStatBuffer baseStatBuffer)
+		this.u = u
+		if baseStatBuffer == null
+			this.baseStats = DEFAULT_BASE_STAT_BUFFER
+		else
+			this.baseStats = baseStatBuffer
+		arrayStart = 1 + (this castTo int - 1) * numStats
+		for n = 0 to numStats
+			cacheDirty[arrayStart + n] = true
+			// Copy UnitBaseStatBuffer:
+			if statType[n] == StatType.LINEAR
+				statsAbs[arrayStart + n] = baseStats.getStatRaw(n castTo Stat)
+			else // EXPONENTIAL, LOGISTIC
+				statsPerc[arrayStart + n] = rational(baseStats.getStatRaw(n castTo Stat), 100)
+		 
+	
+	/** Retrieves the specified stats value, reads it from cache if available. */
+	function get(Stat s) returns int
+		int result = 0 
+		if cacheDirty[arrayStart + s castTo int]
+			// cache miss
+			result = getStatRecalc(s castTo int)
+			cache[arrayStart + s castTo int] = result
+			cacheDirty[arrayStart + s castTo int] = false
+		else
+			// cache hit
+			result = cache[arrayStart + s castTo int]
+		return result
+	
+	/** Retrieves the specified stats base value. */
+	function getBaseStat(Stat s) returns int
+		int res = 0
+		switch statType[s castTo int]
+			case LINEAR
+				res = baseStats.getStatRaw(s)
+			case EXPONENTIAL
+				res = baseStats.getStatRaw(s)-100
+			case LOGISTIC
+				res = 100-baseStats.getStatRaw(s)
+		return res
+		
+	
+	/** Calculates the specified stats value. */
+	private function getStatRecalc(int statId) returns int
+		int result = 0
+		switch statType[statId]
+			case LINEAR
+				result = statsAbs[arrayStart + statId]
+			case EXPONENTIAL
+				result = (statsPerc[arrayStart + statId] * rational(100, 1)).toInt() - 100
+			case LOGISTIC
+				result = 100 - (statsPerc[arrayStart + statId] * rational(100, 1)).toInt()
+		if statSubstat[statId] != -1
+			// TODO: read substat value from cache, problem: cyclic dependency
+//			result = (result*(100+getStat(statSubstat[statId] castTo Stat))) div 100
+			result = (result*(100+getStatRecalc(statSubstat[statId]))) div 100
+		return result
+	
+	/** Adds the specified stats event to the event queue, if not added yet. */
+	private static function eventQueueAdd(Stat s)
+		if not isEventAdded[s castTo int] and statChangedEvents[s castTo int] != null
+			isEventAdded[s castTo int] = true
+			eventsToInvokeLast++
+			eventsToInvoke[eventsToInvokeLast] = s
+	
+	/** Resets the event queue. */
+	private static function eventQueueReset()
+		eventsToInvokeLast = -1
+		
+	/** Fires all events in the event queue. */
+	function eventQueueInvoke()
+		for n = 0 to eventsToInvokeLast
+			isEventAdded[eventsToInvoke[n] castTo int] = false
+			statChangedEvents[eventsToInvoke[n] castTo int].statChanged(u, eventsToInvoke[n])
+	
+	/** Applies all stat values from the specified StatList to this UnitStatBuffer. */
+	function apply(StatList l)
+		eventQueueReset()
+		for StatEntity s in l.statList
+			// Mark cache dirty:
+			cacheDirty[arrayStart + s.stat castTo int] = true
+			if parentStat[s.stat castTo int] != -1
+				cacheDirty[arrayStart + parentStat[s.stat castTo int]] = true
+				eventQueueAdd(parentStat[s.stat castTo int] castTo Stat)
+			else
+				eventQueueAdd(s.stat)
+			// Accumulate values:
+			if statType[s.stat castTo int] == StatType.LINEAR
+				statsAbs[arrayStart + s.stat castTo int] += s.val
+			else // EXPONENTIAL, LOGISTIC
+				statsPerc[arrayStart + s.stat castTo int] *= rational(s.val, 100)
+		eventQueueInvoke()
+		
+	/** Removes all stat values from the specified StatList from this UnitStatBuffer. */
+	function remove(StatList l)
+		eventQueueReset()
+		for StatEntity s in l.statList
+			// Mark cache dirty:
+			cacheDirty[arrayStart + s.stat castTo int] = true
+			if parentStat[s.stat castTo int] != -1
+				cacheDirty[arrayStart + parentStat[s.stat castTo int]] = true
+				eventQueueAdd(parentStat[s.stat castTo int] castTo Stat)
+			else
+				eventQueueAdd(s.stat)
+			// Accumulate values:
+			cacheDirty[arrayStart + s.stat castTo int] = true
+			if statType[s.stat castTo int] == StatType.LINEAR
+				statsAbs[arrayStart + s.stat castTo int] -= s.val
+			else // EXPONENTIAL, LOGISTIC
+				statsPerc[arrayStart + s.stat castTo int] /= rational(s.val, 100)
+		eventQueueInvoke()
+
+init
+	statRegistry()
+	DEFAULT_BASE_STAT_BUFFER = new UnitBaseStatBuffer(0)

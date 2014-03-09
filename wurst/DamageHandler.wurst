@@ -1,0 +1,64 @@
+package DamageHandler
+import StatHandler
+import Colors
+import Texttag
+
+public function combatTextDamage(unit source, unit target, real dmg)
+	createTTEx(target.getPos3fake(), vec2(GetRandomReal(-0.02, 0.02), 0.04), R2I(dmg).toString(), 8., 1.2, colorA(255, 255, 255, 255), GetOwningPlayer(source))
+	..setPermanent(false)
+	..setFadepoint(0.6)
+	
+public function combatTextCrit(unit source, unit target, real dmg)
+	createTTEx(target.getPos3fake(), vec2(GetRandomReal(-0.02, 0.02), 0.04), R2I(dmg).toString() + "!", 8., 1.2, colorA(255, 0, 0, 255), GetOwningPlayer(source))
+	..setPermanent(false)
+	..setFadepoint(0.6)
+	
+public function combatTextEvade(unit source, unit target)
+	createTTEx(target.getPos3fake(), vec2(GetRandomReal(-0.02, 0.02), 0.04), "dodge", 8., 1.2, colorA(255, 255, 255, 255), GetOwningPlayer(source))
+	..setPermanent(false)
+	..setFadepoint(0.6)
+
+trigger unitAttackTrigger
+
+// Wrapper for non-attack damage.
+public function unitDamageTarget(unit source, unit target, real damage)
+	unitDamageTarget(source, target, damage, false)
+
+public function unitDamageTarget(unit source, unit target, real damage, boolean isAttack)
+	boolean isCrit = false
+	var dmg = damage
+	// If damage comes from autoattack:
+	if isAttack
+		// Evasion:
+		if GetRandomInt(0, 99) < target.getStat(Stat.EVASION) // if evade ...
+			combatTextEvade(source, target)
+			return
+		// Crit:
+		if GetRandomInt(0, 99) < source.getStat(Stat.CRITCHANCE) // if crit ...
+			isCrit = true
+			dmg *= 1+source.getStat(Stat.CRITDAMAGE)*0.01
+		// Armor:
+		dmg -= target.getStat(Stat.ARMOR)
+	// Apply damage
+	if dmg > 0
+		target.setHP(target.getHP() - dmg)
+	// Floating text
+	if isCrit
+		combatTextCrit(source, target, dmg)
+	else
+		combatTextDamage(source, target, dmg)
+	
+
+function unitAttacked()
+	unit source = GetEventDamageSource()
+	unit target = GetTriggerUnit()
+	real damage = 1.*source.getStat(Stat.DAMAGE)
+	unitDamageTarget(source, target, damage, true)
+
+public class DamageHandler
+	construct(unit u)
+		unitAttackTrigger.registerUnitEvent(u, EVENT_UNIT_DAMAGED)
+	
+init
+	unitAttackTrigger = CreateTrigger()
+	..addAction(function unitAttacked)

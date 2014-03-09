@@ -1,0 +1,24 @@
+package UnitWrapper
+import StatHandler
+import DamageHandler
+
+/** Unit indexer function. */
+public function getUnitIndex(unit u) returns integer
+	return u.getUserData()
+
+public class UnitWrapper
+	unit u
+	UnitStatBuffer statBuffer
+	DamageHandler damageHandler
+	
+	
+	construct(player owner, int raw, real x, real y, real face)
+		u = CreateUnit(owner, raw, x, y, face)
+		u.setUserData(this castTo int)
+		statBuffer = new UnitStatBuffer(u)
+		damageHandler = new DamageHandler(u)
+	
+	ondestroy
+		u.setUserData(0) // Invalid units should have index 0.
+		destroy statBuffer
+		destroy damageHandler

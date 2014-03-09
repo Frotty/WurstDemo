@@ -1,0 +1,73 @@
+package ItemTypeGen
+import StatHandler
+import ObjEditingNatives
+import ItemTypeList
+import HashMap
+
+HashMap<int, StatList> itemStats = new HashMap<int, StatList>()
+
+public function getItemStatList(item i) returns StatList
+	return itemStats.get(GetItemTypeId(i)) 
+
+public function genItemType(int newRawId, string name, int hp, int mana, int dmg, int dmgPerc, int armor, int evasion, int critchance, int critdamage, int spellpower, int spellpowerPerc, string icon)
+	if not compiletimeMode1
+		StatList sl = new StatList()
+		if hp != 0
+			sl.add(Stat.LIFE, hp)
+		if mana != 0
+			sl.add(Stat.MANA, mana)
+		if dmg != 0
+			sl.add(Stat.DAMAGE, dmg)
+		if dmgPerc != 0
+			sl.add(Stat.DAMAGE_PERC, dmgPerc)
+		if armor != 0
+			sl.add(Stat.ARMOR, armor)
+		if evasion != 0
+			sl.add(Stat.EVASION, evasion)
+		if critchance != 0
+			sl.add(Stat.CRITCHANCE, critchance)
+		if critdamage != 0
+			sl.add(Stat.CRITDAMAGE, critdamage)
+		if spellpower != 0
+			sl.add(Stat.SPELLPOWER, spellpower)
+		if spellpowerPerc != 0
+			sl.add(Stat.SPELLPOWER_PERC, spellpowerPerc)
+		itemStats.put(newRawId, sl) // Save StatList to hashtable with itemtype raw as key.
+	else
+		ObjectDefinition def = createObjectDefinition("w3t", newRawId, 'ches')
+		string tooltip = "Stats:"
+		if hp != 0
+			tooltip += "\n+" + hp.toString() + " HP"
+		if mana != 0
+			tooltip += "\n+" + mana.toString() + " Mana"
+		if dmg != 0
+			tooltip += "\n+" + dmg.toString() + " Damage"
+		if dmgPerc != 0
+			tooltip += "\n+" + dmgPerc.toString() + "% Damage"
+		if armor != 0
+			tooltip += "\n+" + armor.toString() + " Armor"
+		if evasion != 0
+			tooltip += "\n+" + evasion.toString() + "% Evasion"
+		if critchance != 0
+			tooltip += "\n+" + critchance.toString() + "% Critchance"
+		if critdamage != 0
+			tooltip += "\n+" + critdamage.toString() + "% Critdamage"
+		if spellpower != 0
+			tooltip += "\n+" + spellpower.toString() + " Spellpower"
+		if spellpowerPerc != 0
+			tooltip += "\n+" + spellpowerPerc.toString() + "% Spellpower"
+		def.setString("unam", name)
+		def.setString("utub", tooltip)
+		def.setString("ides", tooltip)
+		def.setString("iico", icon)
+
+boolean compiletimeMode1
+
+@compiletime function genObjects()
+	compiletimeMode1 = true
+	genItemTypes()
+			
+init
+	compiletimeMode1 = false
+	genItemTypes()
+

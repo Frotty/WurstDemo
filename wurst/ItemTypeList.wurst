@@ -1,0 +1,7 @@
+package ItemTypeList
+import ItemTypeGen
+
+public function genItemTypes()
+	// Arguments: newRawId, name, hp, mana, dmg, dmgPerc, armor, evasion, critchance, critdamage, spellpower, spellpowerPerc, icon
+	genItemType('i000', "Rusty Axe", 0, 0, 4, 20, 0, 0, 5, 0, 0, 0, "ReplaceableTextures\\CommandButtons\\BTNOrcMeleeUpTwo.blp")
+	genItemType('i001', "Enchanted Hood", 10, 15, 0, 0, 2, 5, 0, 0, 5, 0, "ReplaceableTextures\\CommandButtons\\BTNHoodOfCunning.blp")

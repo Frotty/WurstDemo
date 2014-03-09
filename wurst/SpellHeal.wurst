@@ -1,0 +1,41 @@
+package SpellHeal
+import StatHandler
+import ChannelSpellPreset
+
+public constant int SPELL_RAW_HEAL = 'A000'
+
+public function combatTextHeal(unit source, unit target, real heal)
+	createTTEx(target.getPos3fake(), vec2(GetRandomReal(-0.02, 0.02), 0.04), R2I(heal).toString(), 8., 1.2, colorA(0, 255, 0, 255), GetOwningPlayer(source))
+	..setPermanent(false)
+	..setFadepoint(0.6)
+
+function spellHeal(unit caster, unit target)
+	let heal = caster.getStat(Stat.SPELLPOWER)
+	target.setHP(target.getHP() + heal)
+	AddSpecialEffectTarget("Abilities\\Spells\\Human\\Heal\\HealTarget.mdl", target, "overhead").destr()
+	combatTextHeal(caster, target, heal*1.)
+
+init
+	let onCast = CreateTrigger()
+	for n = 0 to 11
+		onCast.registerPlayerUnitEvent(Player(n), EVENT_PLAYER_UNIT_SPELL_EFFECT, null)
+	onCast.addAction(() -> begin
+		if GetSpellAbilityId() == SPELL_RAW_HEAL
+			spellHeal(GetTriggerUnit(), GetSpellTargetUnit())
+	end)
+
+@compiletime function genObjects()
+	let def = new ChannelSpellPreset(SPELL_RAW_HEAL, 1)
+		..removeChannelProperties()
+		..setOption(Option.VISIBLE, true)
+		..setTargetType(Targettype.UTARGET)
+		..setName("Heal")
+		..setTooltipNormal(1, "Heal")
+		..setHotkeyNormal("Q")
+		..setTooltipNormalExtended(1, "Heals the target by |cffffcc00Spellpower (caster)|r.")
+		..setManaCost(1, 8)
+		..setCooldown(1, 10)
+		..setIconNormal("ReplaceableTextures\\CommandButtons\\BTNStaffOfSilence.blp")
+		..setEffect("")
+		..setCaster("")
+		..setTarget("")

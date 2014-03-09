@@ -1,0 +1,47 @@
+package StatHandlerConfig
+import StatHandler
+import BonusHandler
+import public UnitWrapper
+
+///**
+// * Make this function return a unique index if you want to use the unit extension functions.
+// * You can also comment it out and "import public" a package which provides this function.
+// */
+//public function getUnitIndex(unit u) returns int
+//	return 0
+
+/** List your stats here. */
+public enum Stat
+	LIFE
+	MANA
+	DAMAGE
+	DAMAGE_PERC
+	ARMOR
+	EVASION
+	SPELLPOWER
+	SPELLPOWER_PERC
+	CRITCHANCE
+	CRITDAMAGE
+
+/**
+ * Register all your stats here. Available functions:
+ * - Linear stat:
+ *		registerStatLin(Stat stat)
+ * - Exponential stat:
+ *		registerStatExp(Stat stat)
+ * - Logistic stat:
+ *		registerStatLog(Stat stat)
+ * - Linear stat with linear substat:
+ *		registerStatLinLin(Stat stat, Stat substat)
+ * - Linear stat with exponential substat:
+ *		registerStatLinExp(Stat stat, Stat substat)
+ */
+public function statRegistry()
+	registerStatLin(Stat.LIFE, (unit u, Stat s) -> setUnitBonus(u, Bonus.LIFE, u.getStat(Stat.LIFE)-u.getBaseStat(Stat.LIFE)))
+	registerStatLin(Stat.MANA, (unit u, Stat s) -> setUnitBonus(u, Bonus.MANA, u.getStat(Stat.MANA)-u.getBaseStat(Stat.MANA)))
+	registerStatLinExp(Stat.DAMAGE, Stat.DAMAGE_PERC, (unit u, Stat s) -> setUnitBonus(u, Bonus.DAMAGE, u.getStat(Stat.DAMAGE)-u.getBaseStat(Stat.DAMAGE)))
+	registerStatLin(Stat.ARMOR, (unit u, Stat s) -> setUnitBonus(u, Bonus.ARMOR, u.getStat(Stat.ARMOR)-u.getBaseStat(Stat.ARMOR)))
+	registerStatLog(Stat.EVASION)
+	registerStatLinExp(Stat.SPELLPOWER, Stat.SPELLPOWER_PERC)
+	registerStatLog(Stat.CRITCHANCE)
+	registerStatLin(Stat.CRITDAMAGE)

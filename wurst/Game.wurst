@@ -1,0 +1,54 @@
+package Game
+import UnitWrapper
+import StatHandler
+import ItemTypeGen
+import SpellHeal
+
+UnitWrapper array playerHeroes 
+
+function startGame()
+	// Spawn player heroes:
+	for n = 0 to 11
+		if GetPlayerSlotState(Player(n)) == PLAYER_SLOT_STATE_PLAYING and GetPlayerController(Player(n)) == MAP_CONTROL_USER
+			playerHeroes[n] = new UnitWrapper(Player(n), 'Hero', 0., 0., 0.)
+			playerHeroes[n].u.addAbility(SPELL_RAW_HEAL)
+	// Spawn some units:
+	new UnitWrapper(Player(PLAYER_NEUTRAL_AGGRESSIVE), 'n000', -1600, -1800, 0.) // Wolf
+	new UnitWrapper(Player(PLAYER_NEUTRAL_AGGRESSIVE), 'n000', -1600, -2000, 0.) // Wolf
+	new UnitWrapper(Player(PLAYER_NEUTRAL_AGGRESSIVE), 'n000', -1400, -2000, 0.) // Wolf
+	new UnitWrapper(Player(PLAYER_NEUTRAL_AGGRESSIVE), 'n000', 1600, -1800, 0.) // Wolf
+	new UnitWrapper(Player(PLAYER_NEUTRAL_AGGRESSIVE), 'n000', 1600, -2000, 0.) // Wolf
+	new UnitWrapper(Player(PLAYER_NEUTRAL_AGGRESSIVE), 'n000', 1400, -2000, 0.) // Wolf
+
+init
+	// After 1 second start game:
+	CreateTrigger()
+		..registerTimerEvent(1., false)
+		..addAction(() -> startGame())
+	// Hero pickup/drop item:
+	let pickupItemTrig = CreateTrigger()
+	let dropItemTrig = CreateTrigger()
+	for n = 0 to 11
+		pickupItemTrig.registerPlayerUnitEvent(Player(n), EVENT_PLAYER_UNIT_PICKUP_ITEM, null)
+		dropItemTrig.registerPlayerUnitEvent(Player(n), EVENT_PLAYER_UNIT_DROP_ITEM, null)
+	pickupItemTrig.addAction(() -> begin
+			GetTriggerUnit().applyStatList(getItemStatList(GetManipulatedItem()))
+	end)
+	dropItemTrig.addAction(() -> begin
+			GetTriggerUnit().removeStatList(getItemStatList(GetManipulatedItem()))
+	end)
+	// Display stats when esc pressed:
+	let displayStatsTrig = CreateTrigger()
+	for n = 0 to 11
+		displayStatsTrig.registerPlayerEvent(Player(n), EVENT_PLAYER_END_CINEMATIC)
+	displayStatsTrig.addAction(() -> begin
+			let sb = playerHeroes[GetPlayerId(GetTriggerPlayer())].statBuffer
+			print("\nLife: " + sb.get(Stat.LIFE).toString())
+			print("Mana: " + sb.get(Stat.MANA).toString())
+			print("Damage: " + sb.get(Stat.DAMAGE).toString())
+			print("Armor: " + sb.get(Stat.ARMOR).toString())
+			print("Evasion: " + sb.get(Stat.EVASION).toString())
+			print("Spellpower: " + sb.get(Stat.SPELLPOWER).toString())
+			print("Critchance: " + sb.get(Stat.CRITCHANCE).toString())
+			print("Critdamage: " + sb.get(Stat.CRITDAMAGE).toString())
+	end)

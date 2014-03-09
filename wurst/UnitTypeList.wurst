@@ -1,0 +1,7 @@
+package UnitTypeList
+import UnitTypeGen
+
+public function genUnitTypes()
+	// Arguments: int newRawId, int oldRawId, string name, int hp, int mana, real as, int dmg, int armor, int evasion, int critchance, int critdamage, int spellpower
+	genHeroType('Hero', 'nrog', "Hero", 120, 60, 1.8, 7, 0, 10, 10, 50, 20) // Player hero
+	genUnitType('n000', 'nwlt', "Wolf", 80, 40, 2., 6, 1, 10, 15, 50, 10) // Wolf
